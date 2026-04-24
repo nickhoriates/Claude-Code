@@ -117,8 +117,15 @@ def print_record(data: dict, as_json: bool = False) -> None:
 
 async def run(label_numbers: list[str], as_json: bool) -> None:
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context()
+        # Fall back to a locally installed Chromium if the default path is missing
+        import os
+        _fallback = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
+        _launch_opts: dict = {"headless": True}
+        if not os.path.exists(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "") + "/chromium_headless_shell-1208") \
+                and os.path.exists(_fallback):
+            _launch_opts["executable_path"] = _fallback
+        browser = await p.chromium.launch(**_launch_opts)
+        context = await browser.new_context(ignore_https_errors=True)
         page = await context.new_page()
 
         all_results = []
